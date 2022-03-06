@@ -316,7 +316,7 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
 
     protected function getCollectionClass($className): string
     {
-        // Return something in the very very unlikely scenario the model doesn't
+        // Return something in the very unlikely scenario the model doesn't
         // have a newCollection() method.
         if (!method_exists($className, 'newCollection')) {
             return '\\' . Collection::class;

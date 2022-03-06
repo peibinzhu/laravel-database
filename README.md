@@ -1,17 +1,12 @@
 Laravel 数据库组件
 =======
 
-## Installation
-
-To install peibin/laravel, run the command below and you will get the latest
-version
+## 安装
 
 ```sh
 composer require peibin-laravel/database
 ```
 
-## Documentation
+## 已有功能
 
-目前已有功能
-
-- 生成带字段注释的模型类文件
+- [命令行创建模型](./docs/create-model-command.md)

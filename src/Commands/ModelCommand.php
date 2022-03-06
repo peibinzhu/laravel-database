@@ -9,7 +9,6 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-
 namespace PeibinLaravel\Database\Commands;
 
 use Illuminate\Console\Command;
@@ -142,7 +141,7 @@ class ModelCommand extends Command
      * @param        $default
      * @return mixed
      */
-    protected function getOption(string $name, string $key, string $database = 'default', $default = null): mixed
+    protected function getOption(string $name, string $key, string $database = 'default', $default = null)
     {
         $result = $this->input->getOption($name);
         $nonInput = null;
@@ -432,7 +431,7 @@ class ModelCommand extends Command
         return [
             [
                 'database',
-                'db',
+                'd',
                 InputOption::VALUE_OPTIONAL,
                 'Which connection database you want the Model use.',
                 'mysql',
