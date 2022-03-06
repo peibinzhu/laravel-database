@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace %NAMESPACE%;
+
+%USES%
+
+class %CLASS% extends %INHERITANCE%
+{
+    /**
+     * The connection name for the model.
+     *
+     * @var string
+     */
+    protected $connection = '%CONNECTION%';
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = '%TABLE%';
+}
