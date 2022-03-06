@@ -30,6 +30,13 @@
       "PeibinLaravelTest\\Database\\": "tests/"
     }
   },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "PeibinLaravel\\Database\\DatabaseServiceProvider"
+      ]
+    }
+  },
   "config": {
     "sort-packages": true
   },
