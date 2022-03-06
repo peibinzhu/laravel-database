@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PeibinLaravel\Database;
+namespace PeibinLaravel\Database\Utils;
 
 use PhpParser\Node;
 use PhpParser\Node\Stmt\ClassMethod;
