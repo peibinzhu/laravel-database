@@ -9,7 +9,6 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-
 namespace PeibinLaravel\Database\Commands;
 
 use Illuminate\Console\Command;
@@ -19,8 +18,8 @@ use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Str;
 use PeibinLaravel\Database\Commands\Ast\ModelUpdateVisitor;
+use PeibinLaravel\Database\StandardPrettyPrinter;
 use PeibinLaravel\Utils\CodeGen\Project;
-use PeibinLaravel\Utils\StandardPrettyPrinter;
 use PhpParser\NodeTraverser;
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
