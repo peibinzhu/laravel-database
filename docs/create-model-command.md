@@ -20,7 +20,11 @@ php artisan gen:model table_name
 | --with-comments |  bool  |               `false`                | 是否增加字段注释  |
 |   --database    | string |               `mysql`                | 数据库名称，脚本会根据数据库配置创建 |
 
+> **table-mapping** 支持 `*` 匹配，用于匹配分表表名映射，格式 `表名:模型名|新表名`，如果是分表表名映射，可指定模型里面 `table` 属性
+
 对应配置也可以配置到 `database.connections.{pool}.commands.gen:model` 中，如下
+
+> 中划线都需要转化为下划线
 
 ```php
 <?php
