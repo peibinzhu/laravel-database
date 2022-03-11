@@ -26,13 +26,13 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use PeibinLaravel\Database\Commands\ModelOption;
+use PeibinLaravel\Utils\CodeGen\PhpDocReader;
+use PeibinLaravel\Utils\CodeGen\PhpParser;
 use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;
 use RuntimeException;
-use PeibinLaravel\Database\Commands\ModelOption;
-use PeibinLaravel\Utils\CodeGen\PhpDocReader;
-use PeibinLaravel\Utils\CodeGen\PhpParser;
 
 class ModelUpdateVisitor extends NodeVisitorAbstract
 {
@@ -96,16 +96,17 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
     {
         switch ($node) {
             case $node instanceof Node\Stmt\Class_:
-                $node->setDocComment(new Doc($this->parse()));
+                $node->setDocComment(new Doc($this->parse($node)));
                 return $node;
         }
         return null;
     }
 
-    protected function parse(): string
+    protected function parse(Node\Stmt\Class_ $node): string
     {
         $doc = '/**' . PHP_EOL;
         $doc = $this->parseProperty($doc);
+        $doc = $this->parseMethod($doc, $node->getDocComment()->getText());
         $doc .= ' */';
         return $doc;
     }
@@ -135,6 +136,16 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
             if ($property['write']) {
                 $doc .= sprintf(' * @property-write %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
                 continue;
+            }
+        }
+        return $doc;
+    }
+
+    protected function parseMethod(string $doc, string $comment): string
+    {
+        foreach (explode(PHP_EOL, $comment) as $line) {
+            if (strpos($line, '@method')) {
+                $doc .= $line . PHP_EOL;
             }
         }
         return $doc;

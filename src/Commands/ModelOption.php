@@ -113,9 +113,34 @@ class ModelOption
         return $this;
     }
 
-    public function getTableMapping(): array
+    /**
+     * @param string $table
+     * @return object
+     */
+    public function getTableMapping(string $table): object
     {
-        return $this->tableMapping;
+        $mapping = new \stdClass();
+        $mapping->class = null;
+        $mapping->table = null;
+
+        foreach ($this->tableMapping as $key => $mapTable) {
+            if ($mapping->class) {
+                break;
+            }
+
+            if (substr($key, -1) == '*') {
+                $reg = sprintf('/%s(.*)/', substr($key, 0, strlen($key) - 1));
+                if (preg_match($reg, $table, $matches)) {
+                    [$class, $newTable] = array_pad(explode('|', $mapTable), 2, null);
+                    $mapping->class = $class;
+                    $mapping->table = $newTable;
+                }
+            } elseif ($key == $table) {
+                $mapping->class = $table;
+                break;
+            }
+        }
+        return $mapping;
     }
 
     public function setTableMapping(array $tableMapping): self

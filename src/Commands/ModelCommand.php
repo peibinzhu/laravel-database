@@ -208,14 +208,15 @@ class ModelCommand extends Command
         $columns = $this->getColumnTypeListing($builder, $table);
 
         $project = new Project();
-        $class = $option->getTableMapping()[$table] ?? Str::studly($table);
+        $mapping = $option->getTableMapping($table);
+        $class = $mapping->class ?: Str::studly($table);
 
         $class = $project->namespace($option->getPath()) . $class;
         $path = base_path($project->path($class));
 
         if (!file_exists($path)) {
             $this->mkdir($path);
-            file_put_contents($path, $this->buildClass($table, $class, $option));
+            file_put_contents($path, $this->buildClass($mapping->table ?: $table, $class, $option));
         }
 
         $stms = $this->astParser->parse(file_get_contents($path));

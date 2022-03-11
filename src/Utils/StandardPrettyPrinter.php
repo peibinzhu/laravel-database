@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace PeibinLaravel\Database\Utils;
 
 use PhpParser\Node;
+use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Declare_;
 use PhpParser\Node\Stmt\Nop;
 use PhpParser\Node\Stmt\Property;
-use PhpParser\Node\Stmt\Use_;
 use PhpParser\PrettyPrinter\Standard;
 
 class StandardPrettyPrinter extends Standard
@@ -29,6 +29,8 @@ class StandardPrettyPrinter extends Standard
         }
 
         $result = '';
+
+        $lastClass = null;
         foreach ($nodes as $node) {
             $comments = $node->getComments();
             if ($comments) {
@@ -40,20 +42,34 @@ class StandardPrettyPrinter extends Standard
 
             $result .= $this->nl . $this->p($node);
 
+            // Add a newline after the matching type.
             if (
                 $node instanceof Declare_ ||
-                $node instanceof Use_ ||
                 $node instanceof Property ||
-                $node instanceof ClassMethod
+                $node instanceof Class_ ||
+                $node instanceof ClassMethod ||
+                get_class($node) == $lastClass
             ) {
-                $result .= $this->nl;
+                $result .= PHP_EOL;
             }
+
+            // Remove newline from last method.
+            if ($node instanceof ClassMethod && get_class($node) == $lastClass) {
+                $result = rtrim($result);
+            }
+
+            $lastClass = get_class($node);
         }
 
         if ($indent) {
             $this->outdent();
         }
-
         return $result;
+    }
+
+    protected function pStmt_Declare(Declare_ $node): string
+    {
+        return 'declare(' . $this->pCommaSeparated($node->declares) . ')'
+            . (null !== $node->stmts ? ' {' . $this->pStmts($node->stmts) . $this->nl . '}' : ';');
     }
 }
