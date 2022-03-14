@@ -9,8 +9,10 @@ use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Declare_;
+use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\Node\Stmt\Nop;
 use PhpParser\Node\Stmt\Property;
+use PhpParser\Node\Stmt\Use_;
 use PhpParser\PrettyPrinter\Standard;
 
 class StandardPrettyPrinter extends Standard
@@ -40,8 +42,16 @@ class StandardPrettyPrinter extends Standard
                     continue;
                 }
             }
-            $result .= $this->nl . $this->p($node);
 
+            // Line breaks are required when commenting between Declare and Namespace.
+            if (
+                $comments &&
+                ($node instanceof Declare_ || $node instanceof Namespace_)
+            ) {
+                $result .= PHP_EOL;
+            }
+
+            $result .= $this->nl . $this->p($node);
 
             $classInsideNode = (
                 $node instanceof ClassConst ||
@@ -50,12 +60,26 @@ class StandardPrettyPrinter extends Standard
             );
 
             // Add a newline after the matching type.
-            if ($node instanceof Declare_ || $node instanceof Class_ || $classInsideNode) {
+            if (
+                $node instanceof Declare_ ||
+                $node instanceof Class_ ||
+                $classInsideNode
+            ) {
+                $result .= PHP_EOL;
+            }
+
+            // A line break is required between use and class.
+            if (
+                $node instanceof Use_ &&
+                isset($nodes[$key + 1]) &&
+                $nodes[$key + 1] instanceof Class_
+            ) {
                 $result .= PHP_EOL;
             }
 
             // Remove the newline character of the last node inside the class.
-            if ($classInsideNode && $key == $len - 1) {
+            $isEndLastNode = $key == $len - 1;
+            if ($classInsideNode && $isEndLastNode) {
                 $result = rtrim($result);
             }
         }

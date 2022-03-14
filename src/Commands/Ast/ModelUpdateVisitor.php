@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace PeibinLaravel\Database\Commands\Ast;
 
 use Illuminate\Contracts\Database\Eloquent\Castable;
@@ -121,20 +122,24 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
                 }
                 continue;
             }
-            $doc .= sprintf(' * @property %s $%s %s', $type, $name, $comment) . PHP_EOL;
+            $line = sprintf(' * @property %s $%s %s', $type, $name, $comment);
+            $doc .= trim($line) . PHP_EOL;
         }
         foreach ($this->properties as $name => $property) {
             $comment = $property['comment'] ?? '';
             if ($property['read'] && $property['write']) {
-                $doc .= sprintf(' * @property %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
+                $line = sprintf(' * @property %s $%s %s', $property['type'], $name, $comment);
+                $doc .= trim($line) . PHP_EOL;
                 continue;
             }
             if ($property['read']) {
-                $doc .= sprintf(' * @property-read %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
+                $line = sprintf(' * @property-read %s $%s %s', $property['type'], $name, $comment);
+                $doc .= trim($line) . PHP_EOL;
                 continue;
             }
             if ($property['write']) {
-                $doc .= sprintf(' * @property-write %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
+                $line = sprintf(' * @property-write %s $%s %s', $property['type'], $name, $comment);
+                $doc .= trim($line) . PHP_EOL;
                 continue;
             }
         }
