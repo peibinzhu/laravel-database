@@ -6,6 +6,7 @@ namespace PeibinLaravel\Database\Utils;
 
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\ClassConst;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Declare_;
 use PhpParser\Node\Stmt\Nop;
@@ -30,8 +31,8 @@ class StandardPrettyPrinter extends Standard
 
         $result = '';
 
-        $lastClass = null;
-        foreach ($nodes as $node) {
+        $len = count($nodes);
+        foreach ($nodes as $key => $node) {
             $comments = $node->getComments();
             if ($comments) {
                 $result .= $this->nl . $this->pComments($comments);
@@ -39,26 +40,24 @@ class StandardPrettyPrinter extends Standard
                     continue;
                 }
             }
-
             $result .= $this->nl . $this->p($node);
 
-            // Add a newline after the matching type.
-            if (
-                $node instanceof Declare_ ||
+
+            $classInsideNode = (
+                $node instanceof ClassConst ||
                 $node instanceof Property ||
-                $node instanceof Class_ ||
-                $node instanceof ClassMethod ||
-                get_class($node) == $lastClass
-            ) {
+                $node instanceof ClassMethod
+            );
+
+            // Add a newline after the matching type.
+            if ($node instanceof Declare_ || $node instanceof Class_ || $classInsideNode) {
                 $result .= PHP_EOL;
             }
 
-            // Remove newline from last method.
-            if ($node instanceof ClassMethod && get_class($node) == $lastClass) {
+            // Remove the newline character of the last node inside the class.
+            if ($classInsideNode && $key == $len - 1) {
                 $result = rtrim($result);
             }
-
-            $lastClass = get_class($node);
         }
 
         if ($indent) {
