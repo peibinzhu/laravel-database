@@ -123,23 +123,23 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
                 continue;
             }
             $line = sprintf(' * @property %s $%s %s', $type, $name, $comment);
-            $doc .= trim($line) . PHP_EOL;
+            $doc .= rtrim($line) . PHP_EOL;
         }
         foreach ($this->properties as $name => $property) {
             $comment = $property['comment'] ?? '';
             if ($property['read'] && $property['write']) {
                 $line = sprintf(' * @property %s $%s %s', $property['type'], $name, $comment);
-                $doc .= trim($line) . PHP_EOL;
+                $doc .= rtrim($line) . PHP_EOL;
                 continue;
             }
             if ($property['read']) {
                 $line = sprintf(' * @property-read %s $%s %s', $property['type'], $name, $comment);
-                $doc .= trim($line) . PHP_EOL;
+                $doc .= rtrim($line) . PHP_EOL;
                 continue;
             }
             if ($property['write']) {
                 $line = sprintf(' * @property-write %s $%s %s', $property['type'], $name, $comment);
-                $doc .= trim($line) . PHP_EOL;
+                $doc .= rtrim($line) . PHP_EOL;
                 continue;
             }
         }
