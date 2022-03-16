@@ -106,14 +106,20 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
     protected function parse(Node\Stmt\Class_ $node): string
     {
         $doc = '/**' . PHP_EOL;
-        $doc = $this->parseProperty($doc);
-        $doc = $this->parseMethod($doc, $node->getDocComment()->getText());
+        $doc .= $propertyDoc = $this->parseProperty();
+        $doc .= $methodDoc = $this->parseMethod($node->getDocComment());
         $doc .= ' */';
+
+        if (!$propertyDoc && !$methodDoc) {
+            $doc = '';
+        }
+
         return $doc;
     }
 
-    protected function parseProperty(string $doc): string
+    protected function parseProperty(): string
     {
+        $doc = '';
         foreach ($this->columns as $column) {
             [$name, $type, $comment] = $this->getProperty($column);
             if (array_key_exists($name, $this->properties)) {
@@ -146,9 +152,14 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
         return $doc;
     }
 
-    protected function parseMethod(string $doc, string $comment): string
+    protected function parseMethod(Doc $comment = null): string
     {
-        foreach (explode(PHP_EOL, $comment) as $line) {
+        $doc = '';
+        if (!$comment) {
+            return $doc;
+        }
+
+        foreach (explode(PHP_EOL, $comment->getText()) as $line) {
             if (strpos($line, '@method')) {
                 $doc .= $line . PHP_EOL;
             }

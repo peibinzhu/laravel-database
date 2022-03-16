@@ -37,7 +37,9 @@ class StandardPrettyPrinter extends Standard
         foreach ($nodes as $key => $node) {
             $comments = $node->getComments();
             if ($comments) {
-                $result .= $this->nl . $this->pComments($comments);
+                $commentText = $this->pComments($comments);
+                $result .= $commentText ? $this->nl . $commentText : '';
+
                 if ($node instanceof Nop) {
                     continue;
                 }
