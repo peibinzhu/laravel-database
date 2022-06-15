@@ -128,13 +128,10 @@ class ModelOption
                 break;
             }
 
-            if (substr($key, -1) == '*') {
-                $reg = sprintf('/%s(.*)/', substr($key, 0, strlen($key) - 1));
-                if (preg_match($reg, $table, $matches)) {
-                    [$class, $newTable] = array_pad(explode('|', $mapTable), 2, null);
-                    $mapping->class = $class;
-                    $mapping->table = $newTable;
-                }
+            if (preg_match('/' . trim($key, '/') . '/', $table)) {
+                [$class, $newTable] = array_pad(explode('|', $mapTable), 2, null);
+                $mapping->class = $class;
+                $mapping->table = $newTable ?: $table;
             } elseif ($key == $table) {
                 $mapping->class = $table;
                 break;
