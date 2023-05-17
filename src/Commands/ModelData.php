@@ -1,27 +1,14 @@
 <?php
 
 declare(strict_types=1);
-/**
- * This file is part of Hyperf.
- *
- * @link     https://www.hyperf.io
- * @document https://hyperf.wiki
- * @contact  group@hyperf.io
- * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
- */
+
 namespace PeibinLaravel\Database\Commands;
 
 class ModelData
 {
-    /**
-     * @var array
-     */
-    protected $columns;
+    protected array $columns = [];
 
-    /**
-     * @var string
-     */
-    protected $class;
+    protected ?string $class = null;
 
     public function getColumns(): array
     {

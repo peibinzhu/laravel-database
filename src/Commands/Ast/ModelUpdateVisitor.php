@@ -1,19 +1,12 @@
 <?php
 
 declare(strict_types=1);
-/**
- * This file is part of Hyperf.
- *
- * @link     https://www.hyperf.io
- * @document https://hyperf.wiki
- * @contact  group@hyperf.io
- * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
- */
 
 namespace PeibinLaravel\Database\Commands\Ast;
 
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
+use Illuminate\Contracts\Database\Eloquent\CastsInboundAttributes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -27,12 +20,15 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use PeibinLaravel\CodeParser\PhpDocReader;
+use PeibinLaravel\CodeParser\PhpParser;
 use PeibinLaravel\Database\Commands\ModelOption;
-use PeibinLaravel\Utils\CodeGen\PhpDocReader;
-use PeibinLaravel\Utils\CodeGen\PhpParser;
 use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionNamedType;
 use RuntimeException;
 
 class ModelUpdateVisitor extends NodeVisitorAbstract
@@ -51,36 +47,18 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
         'morphedByMany'  => MorphToMany::class,
     ];
 
-    /**
-     * @var Model
-     */
-    protected $class;
-
-    /**
-     * @var array
-     */
-    protected $columns = [];
-
-    /**
-     * @var ModelOption
-     */
-    protected $option;
+    protected Model $class;
 
     /**
      * @var Node\Stmt\ClassMethod[]
      */
-    protected $methods = [];
+    protected array $methods = [];
 
-    /**
-     * @var array
-     */
-    protected $properties = [];
+    protected array $properties = [];
 
-    public function __construct($class, $columns, ModelOption $option)
+    public function __construct(string $class, protected array $columns, protected ModelOption $option)
     {
         $this->class = new $class();
-        $this->columns = $columns;
-        $this->option = $option;
     }
 
     public function beforeTraverse(array $nodes)
@@ -96,30 +74,100 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
     public function leaveNode(Node $node)
     {
         switch ($node) {
+            case $node instanceof Node\Stmt\PropertyProperty:
+                if ((string)$node->name === 'fillable' && $this->option->isRefreshFillable()) {
+                    $node = $this->rewriteFillable($node);
+                } elseif ((string)$node->name === 'casts') {
+                    $node = $this->rewriteCasts($node);
+                }
+                return $node;
             case $node instanceof Node\Stmt\Class_:
-                $node->setDocComment(new Doc($this->parse($node)));
+                $node->setDocComment(new Doc($this->parse()));
                 return $node;
         }
+
         return null;
     }
 
-    protected function parse(Node\Stmt\Class_ $node): string
+    protected function rewriteFillable(Node\Stmt\PropertyProperty $node): Node\Stmt\PropertyProperty
     {
-        $doc = '/**' . PHP_EOL;
-        $doc .= $propertyDoc = $this->parseProperty();
-        $doc .= $methodDoc = $this->parseMethod($node->getDocComment());
-        $doc .= ' */';
-
-        if (!$propertyDoc && !$methodDoc) {
-            $doc = '';
+        $items = [];
+        foreach ($this->columns as $column) {
+            $items[] = new Node\Expr\ArrayItem(new Node\Scalar\String_($column['column_name']));
         }
 
+        $node->default = new Node\Expr\Array_($items, [
+            'kind' => Node\Expr\Array_::KIND_SHORT,
+        ]);
+        return $node;
+    }
+
+    protected function rewriteCasts(Node\Stmt\PropertyProperty $node): Node\Stmt\PropertyProperty
+    {
+        $items = [];
+        $keys = [];
+        if ($node->default instanceof Node\Expr\Array_) {
+            $items = $node->default->items;
+        }
+
+        if ($this->option->isForceCasts()) {
+            $items = [];
+            $casts = $this->class->getCasts();
+            foreach ($node->default->items as $item) {
+                $caster = $casts[$item->key->value] ?? null;
+                if ($caster && $this->isCaster($caster)) {
+                    $items[] = $item;
+                }
+            }
+        }
+
+        foreach ($items as $item) {
+            $keys[] = $item->key->value;
+        }
+
+        foreach ($this->columns as $column) {
+            $name = $column['column_name'];
+            $type = $column['cast'] ?? null;
+            if (in_array($name, $keys)) {
+                continue;
+            }
+            if ($type || $type = $this->formatDatabaseType($column['data_type'])) {
+                $items[] = new Node\Expr\ArrayItem(
+                    new Node\Scalar\String_($type),
+                    new Node\Scalar\String_($name)
+                );
+            }
+        }
+
+        $node->default = new Node\Expr\Array_($items, [
+            'kind' => Node\Expr\Array_::KIND_SHORT,
+        ]);
+        return $node;
+    }
+
+    /**
+     * @param object|string $caster
+     */
+    protected function isCaster($caster): bool
+    {
+        return is_subclass_of($caster, CastsAttributes::class)
+            || is_subclass_of($caster, Castable::class)
+            || is_subclass_of($caster, CastsInboundAttributes::class);
+    }
+
+    protected function parse(): string
+    {
+        $doc = '/**' . PHP_EOL;
+        $doc = $this->parseProperty($doc);
+        if ($this->option->isWithIde()) {
+            $doc .= ' * @mixin \\' . GenerateModelIDEVisitor::toIDEClass(get_class($this->class)) . PHP_EOL;
+        }
+        $doc .= ' */';
         return $doc;
     }
 
-    protected function parseProperty(): string
+    protected function parseProperty(string $doc): string
     {
-        $doc = '';
         foreach ($this->columns as $column) {
             [$name, $type, $comment] = $this->getProperty($column);
             if (array_key_exists($name, $this->properties)) {
@@ -128,40 +176,21 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
                 }
                 continue;
             }
-            $line = sprintf(' * @property %s $%s %s', $type, $name, $comment);
-            $doc .= rtrim($line) . PHP_EOL;
+            $doc .= sprintf(' * @property %s $%s %s', $type, $name, $comment) . PHP_EOL;
         }
         foreach ($this->properties as $name => $property) {
             $comment = $property['comment'] ?? '';
             if ($property['read'] && $property['write']) {
-                $line = sprintf(' * @property %s $%s %s', $property['type'], $name, $comment);
-                $doc .= rtrim($line) . PHP_EOL;
+                $doc .= sprintf(' * @property %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
                 continue;
             }
             if ($property['read']) {
-                $line = sprintf(' * @property-read %s $%s %s', $property['type'], $name, $comment);
-                $doc .= rtrim($line) . PHP_EOL;
+                $doc .= sprintf(' * @property-read %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
                 continue;
             }
             if ($property['write']) {
-                $line = sprintf(' * @property-write %s $%s %s', $property['type'], $name, $comment);
-                $doc .= rtrim($line) . PHP_EOL;
+                $doc .= sprintf(' * @property-write %s $%s %s', $property['type'], $name, $comment) . PHP_EOL;
                 continue;
-            }
-        }
-        return $doc;
-    }
-
-    protected function parseMethod(Doc $comment = null): string
-    {
-        $doc = '';
-        if (!$comment) {
-            return $doc;
-        }
-
-        foreach (explode(PHP_EOL, $comment->getText()) as $line) {
-            if (strpos($line, '@method')) {
-                $doc .= $line . PHP_EOL;
             }
         }
         return $doc;
@@ -169,7 +198,7 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
 
     protected function initPropertiesFromMethods()
     {
-        $reflection = new \ReflectionClass(get_class($this->class));
+        $reflection = new ReflectionClass(get_class($this->class));
         $casts = $this->class->getCasts();
 
         foreach ($this->methods as $methodStmt) {
@@ -214,17 +243,14 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
                         ++$loop;
                         $expr = $expr->var;
                     }
-                    $name = $expr->name->name;
+                    $name = $this->getMethodRelationName($method) ?? $expr->name->name;
                     if (array_key_exists($name, self::RELATION_METHODS)) {
                         if ($name === 'morphTo') {
                             // Model isn't specified because relation is polymorphic
                             $this->setProperty($method->getName(), ['\\' . Model::class], true);
-                        } elseif (
-                            isset($expr->args[0]) &&
-                            $expr->args[0]->value instanceof Node\Expr\ClassConstFetch
-                        ) {
+                        } elseif (isset($expr->args[0]) && $expr->args[0]->value instanceof Node\Expr\ClassConstFetch) {
                             $related = $expr->args[0]->value->class->toCodeString();
-                            if (strpos($name, 'Many') !== false) {
+                            if (str_contains($name, 'Many')) {
                                 // Collection or array of models (because Collection is Arrayable)
                                 $this->setProperty(
                                     $method->getName(),
@@ -248,7 +274,7 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
             }
 
             if (is_subclass_of($caster, CastsAttributes::class)) {
-                $ref = new \ReflectionClass($caster);
+                $ref = new ReflectionClass($caster);
                 $method = $ref->getMethod('get');
                 if ($type = $method->getReturnType()) {
                     // Get return type which defined in `CastsAttributes::get()`.
@@ -256,6 +282,17 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
                 }
             }
         }
+    }
+
+    protected function getMethodRelationName(ReflectionMethod $method): ?string
+    {
+        $returnType = $method->getReturnType();
+        if ($returnType instanceof ReflectionNamedType) {
+            $array = explode('\\', $returnType->getName());
+            return Str::camel(array_pop($array));
+        }
+
+        return null;
     }
 
     protected function setProperty(
@@ -272,7 +309,7 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
             $this->properties[$name]['type'] = 'mixed';
             $this->properties[$name]['read'] = false;
             $this->properties[$name]['write'] = false;
-            $this->properties[$name]['comment'] = (string)$comment;
+            $this->properties[$name]['comment'] = $comment;
             $this->properties[$name]['priority'] = 0;
         }
         if ($this->properties[$name]['priority'] > $priority) {
@@ -295,31 +332,22 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
 
     protected function getProperty($column): array
     {
-        $name = $column['column_name'];
+        $name = $this->option->isCamelCase() ? Str::camel($column['column_name']) : $column['column_name'];
 
         $type = $this->formatPropertyType($column['data_type'], $column['cast'] ?? null);
 
         $comment = $this->option->isWithComments() ? $column['column_comment'] ?? '' : '';
-        $comment = str_replace(["\r\n", "\r", "\n"], '', $comment);
 
         return [$name, $type, $comment];
     }
 
     protected function formatDatabaseType(string $type): ?string
     {
-        switch ($type) {
-            case 'tinyint':
-            case 'smallint':
-            case 'mediumint':
-            case 'int':
-            case 'bigint':
-                return 'integer';
-            case 'bool':
-            case 'boolean':
-                return 'boolean';
-            default:
-                return null;
-        }
+        return match ($type) {
+            'tinyint', 'smallint', 'mediumint', 'int', 'bigint' => 'integer',
+            'bool', 'boolean' => 'boolean',
+            default => null,
+        };
     }
 
     protected function formatPropertyType(string $type, ?string $cast): ?string
@@ -328,22 +356,17 @@ class ModelUpdateVisitor extends NodeVisitorAbstract
             $cast = $this->formatDatabaseType($type) ?? 'string';
         }
 
-        switch ($cast) {
-            case 'integer':
-                return 'int';
-            case 'date':
-            case 'datetime':
-                return '\Carbon\Carbon';
-            case 'json':
-                return 'array';
-        }
-
-        return $cast;
+        return match ($cast) {
+            'integer' => 'int',
+            'date', 'datetime' => '\Carbon\Carbon',
+            'json' => 'array',
+            default => $cast,
+        };
     }
 
     protected function getCollectionClass($className): string
     {
-        // Return something in the very unlikely scenario the model doesn't
+        // Return something in the very very unlikely scenario the model doesn't
         // have a newCollection() method.
         if (!method_exists($className, 'newCollection')) {
             return '\\' . Collection::class;

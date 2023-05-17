@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PeibinLaravel\Database\Commands\Factory;
 
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Config\Repository as ConfigContract;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\Schema\Builder;
 use PeibinLaravel\Database\Commands\ModelOption;
@@ -17,33 +17,19 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 abstract class Factory implements FactoryContract
 {
-    /**
-     * @var Container
-     */
-    protected $container;
+    protected Container $container;
 
-    /**
-     * @var ConnectionResolverInterface
-     */
-    protected $resolver;
+    protected ConnectionResolverInterface $resolver;
 
-    /**
-     * @var ConfigContract
-     */
-    protected $config;
+    protected Repository $config;
 
-    /**
-     * @var Parser
-     */
-    protected $astParser;
+    protected Parser $astParser;
 
-    /**
-     * @var StandardPrettyPrinter
-     */
-    protected $printer;
+    protected StandardPrettyPrinter $printer;
 
-    protected $input;
-    protected $output;
+    protected InputInterface $input;
+
+    protected OutputInterface $output;
 
     public function __construct(InputInterface $input, OutputInterface $output)
     {
@@ -52,7 +38,7 @@ abstract class Factory implements FactoryContract
         $this->container = Container::getInstance();
 
         $this->resolver = $this->container->get(ConnectionResolverInterface::class);
-        $this->config = $this->container->get(ConfigContract::class);
+        $this->config = $this->container->get(Repository::class);
         $this->astParser = (new ParserFactory())->create(ParserFactory::ONLY_PHP7);
         $this->printer = new StandardPrettyPrinter();
     }

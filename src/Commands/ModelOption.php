@@ -1,62 +1,40 @@
 <?php
 
 declare(strict_types=1);
-/**
- * This file is part of Hyperf.
- *
- * @link     https://www.hyperf.io
- * @document https://hyperf.wiki
- * @contact  group@hyperf.io
- * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
- */
+
 namespace PeibinLaravel\Database\Commands;
 
 class ModelOption
 {
-    /**
-     * @var string
-     */
-    protected $database;
+    public const PROPERTY_SNAKE_CASE = 0;
 
-    /**
-     * @var string
-     */
-    protected $path;
+    public const PROPERTY_CAMEL_CASE = 1;
 
-    /**
-     * @var bool
-     */
-    protected $forceCasts;
+    protected ?string $database = null;
 
-    /**
-     * @var string
-     */
-    protected $prefix;
+    protected ?string $path = null;
 
-    /**
-     * @var string
-     */
-    protected $inheritance;
+    protected ?bool $forceCasts = null;
 
-    /**
-     * @var string
-     */
-    protected $uses;
+    protected ?string $prefix = null;
 
-    /**
-     * @var bool
-     */
-    protected $withComments;
+    protected ?string $inheritance = null;
 
-    /**
-     * @var array
-     */
-    protected $tableMapping = [];
+    protected ?string $uses = null;
 
-    /**
-     * @var array
-     */
-    protected $ignoreTables = [];
+    protected ?bool $refreshFillable = null;
+
+    protected ?bool $withComments = null;
+
+    protected ?bool $withIde = null;
+
+    protected array $tableMapping = [];
+
+    protected array $ignoreTables = [];
+
+    protected array $visitors = [];
+
+    protected int $propertyCase = self::PROPERTY_SNAKE_CASE;
 
     public function getDatabase(): string
     {
@@ -77,6 +55,17 @@ class ModelOption
     public function setPath(string $path): self
     {
         $this->path = $path;
+        return $this;
+    }
+
+    public function isForceCasts(): bool
+    {
+        return $this->forceCasts;
+    }
+
+    public function setForceCasts(bool $forceCasts): static
+    {
+        $this->forceCasts = $forceCasts;
         return $this;
     }
 
@@ -113,10 +102,17 @@ class ModelOption
         return $this;
     }
 
-    /**
-     * @param string $table
-     * @return object
-     */
+    public function isRefreshFillable(): bool
+    {
+        return $this->refreshFillable;
+    }
+
+    public function setRefreshFillable(bool $refreshFillable): static
+    {
+        $this->refreshFillable = $refreshFillable;
+        return $this;
+    }
+
     public function getTableMapping(string $table): object
     {
         $mapping = new \stdClass();
@@ -169,6 +165,39 @@ class ModelOption
     public function setWithComments(bool $withComments): self
     {
         $this->withComments = $withComments;
+        return $this;
+    }
+
+    public function isWithIde(): bool
+    {
+        return $this->withIde;
+    }
+
+    public function setWithIde(bool $withIde): ModelOption
+    {
+        $this->withIde = $withIde;
+        return $this;
+    }
+
+    public function getVisitors(): array
+    {
+        return $this->visitors;
+    }
+
+    public function setVisitors(array $visitors): static
+    {
+        $this->visitors = $visitors;
+        return $this;
+    }
+
+    public function isCamelCase(): bool
+    {
+        return $this->propertyCase === self::PROPERTY_CAMEL_CASE;
+    }
+
+    public function setPropertyCase($propertyCase): static
+    {
+        $this->propertyCase = (int)$propertyCase;
         return $this;
     }
 }

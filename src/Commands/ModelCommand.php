@@ -1,18 +1,11 @@
 <?php
 
 declare(strict_types=1);
-/**
- * This file is part of Hyperf.
- *
- * @link     https://www.hyperf.io
- * @document https://hyperf.wiki
- * @contact  group@hyperf.io
- * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
- */
+
 namespace PeibinLaravel\Database\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Config\Repository as ConfigContract;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\Schema\Builder;
@@ -53,30 +46,15 @@ class ModelCommand extends Command
      */
     protected $description = 'Create a new Eloquent model class';
 
-    /**
-     * @var Container
-     */
-    protected $container;
+    protected Container $container;
 
-    /**
-     * @var ConnectionResolverInterface
-     */
-    protected $resolver;
+    protected ConnectionResolverInterface $resolver;
 
-    /**
-     * @var ConfigContract
-     */
-    protected $config;
+    protected Repository $config;
 
-    /**
-     * @var Parser
-     */
-    protected $astParser;
+    protected Parser $astParser;
 
-    /**
-     * @var StandardPrettyPrinter
-     */
-    protected $printer;
+    protected StandardPrettyPrinter $printer;
 
     public function __construct(Container $container)
     {
@@ -96,7 +74,7 @@ class ModelCommand extends Command
     public function run(InputInterface $input, OutputInterface $output): int
     {
         $this->resolver = $this->container->get(ConnectionResolverInterface::class);
-        $this->config = $this->container->get(ConfigContract::class);
+        $this->config = $this->container->get(Repository::class);
         $this->astParser = (new ParserFactory())->create(ParserFactory::ONLY_PHP7);
         $this->printer = new StandardPrettyPrinter();
 
@@ -120,9 +98,16 @@ class ModelCommand extends Command
             ->setUses(
                 $this->getOption('uses', 'commands.gen:model.uses', $database, 'Illuminate\Database\Eloquent\Model')
             )
+            ->setForceCasts($this->getOption('force-casts', 'commands.gen:model.force_casts', $database, false))
+            ->setRefreshFillable(
+                $this->getOption('refresh-fillable', 'commands.gen:model.refresh_fillable', $database, false)
+            )
             ->setTableMapping($this->getOption('table-mapping', 'commands.gen:model.table_mapping', $database, []))
             ->setIgnoreTables($this->getOption('ignore-tables', 'commands.gen:model.ignore_tables', $database, []))
-            ->setWithComments($this->getOption('with-comments', 'commands.gen:model.with_comments', $database, true));
+            ->setWithComments($this->getOption('with-comments', 'commands.gen:model.with_comments', $database, true))
+            ->setWithIde($this->getOption('with-ide', 'commands.gen:model.with_ide', $database, false))
+            ->setVisitors($this->getOption('visitors', 'commands.gen:model.visitors', $database, []))
+            ->setPropertyCase($this->getOption('property-case', 'commands.gen:model.property_case', $database));
 
         $builder = $this->getSchemaBuilder($option->getDatabase());
         $driver = $builder->getConnection()->getDriverName();
@@ -225,9 +210,11 @@ class ModelCommand extends Command
                 'mysql',
             ],
             ['path', null, InputOption::VALUE_OPTIONAL, 'The path that you want the Model file to be generated.',],
+            ['force-casts', 'F', InputOption::VALUE_NONE, 'Whether force generate the casts for model.',],
             ['prefix', 'P', InputOption::VALUE_OPTIONAL, 'What prefix that you want the Model set.',],
             ['inheritance', 'i', InputOption::VALUE_OPTIONAL, 'The inheritance that you want the Model extends.',],
             ['uses', 'U', InputOption::VALUE_OPTIONAL, 'The default class uses of the Model.',],
+            ['refresh-fillable', 'R', InputOption::VALUE_NONE, 'Whether generate fillable argument for model.',],
             [
                 'table-mapping',
                 'M',
@@ -241,6 +228,19 @@ class ModelCommand extends Command
                 'Ignore tables for creating models.',
             ],
             ['with-comments', null, InputOption::VALUE_NONE, 'Whether generate the property comments for model.',],
+            ['with-ide', null, InputOption::VALUE_NONE, 'Whether generate the ide file for model.',],
+            [
+                'visitors',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Custom visitors for ast traverser.',
+            ],
+            [
+                'property-case',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Which property case you want use, 0: snake case, 1: camel case.',
+            ],
         ];
     }
 }

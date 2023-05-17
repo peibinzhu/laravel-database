@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace PeibinLaravel\Database\Commands\Factory;
 
 use Illuminate\Support\Str;
+use InvalidArgumentException;
+use PeibinLaravel\CodeParser\Project;
 use PeibinLaravel\Database\Commands\Ast\ModelUpdateVisitor;
 use PeibinLaravel\Database\Commands\ModelOption;
-use PeibinLaravel\Utils\CodeGen\Project;
 use PhpParser\NodeTraverser;
 
 class MongodbFactory extends Factory
@@ -20,7 +21,7 @@ class MongodbFactory extends Factory
      */
     public function createModels(ModelOption $option)
     {
-        throw new \InvalidArgumentException('Creating all tables is not supported.');
+        throw new InvalidArgumentException('Creating all tables is not supported.');
     }
 
     /**

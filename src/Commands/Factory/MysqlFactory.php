@@ -6,9 +6,9 @@ namespace PeibinLaravel\Database\Commands\Factory;
 
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Str;
+use PeibinLaravel\CodeParser\Project;
 use PeibinLaravel\Database\Commands\Ast\ModelUpdateVisitor;
 use PeibinLaravel\Database\Commands\ModelOption;
-use PeibinLaravel\Utils\CodeGen\Project;
 use PhpParser\NodeTraverser;
 
 class MysqlFactory extends Factory
